@@ -1,0 +1,146 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="UTF-8">
+  <meta http-equiv="X-UA-Compatible" content="IE=edge">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Document</title>
+  <script src="https://www.WebRTC-Experiment.com/RecordRTC.js"></script>
+  <!-- <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/css/bootstrap.min.css" rel="stylesheet"
+    integrity="sha384-1BmE4kWBq78iYhFldvKuhfTAU6auU8tT94WrHftjDbrCEXSU1oBoqyl2QvZ6jIW3" crossorigin="anonymous">
+  <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/js/bootstrap.bundle.min.js"
+    integrity="sha384-ka7Sk0Gln4gmtz2MlQnikT1wXgYsOg+OMhuP+IlRH9sENBO0LRn5q+8nbTov4+1p"
+    crossorigin="anonymous"></script> -->
+  <!-- <script src="node_modules/recordrtc/RecordRTC.js"></script> -->
+  <script defer src="/node_modules/@fortawesome/fontawesome-free/js/brands.js"></script>
+  <script defer src="/node_modules/@fortawesome/fontawesome-free/js/solid.js"></script>
+  <script defer src="/node_modules/@fortawesome/fontawesome-free/js/fontawesome.js"></script>
+</head>
+
+<style>
+  body {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    height: 100vh;
+    text-align: center;
+  }
+
+  #prediction {
+    width: 90%;
+    margin: 1%;
+    font-size: 170%;
+    opacity: .7;
+  }
+
+  #details {
+    padding: 1%;
+    opacity: .7;
+    margin: 1%;
+  }
+
+  .hidden {
+    display: None;
+  }
+
+  .btn {
+    background: rgba(0, 0, 0, 0);
+    border: none;
+    padding: 1%;
+    border-radius: 5px;
+    transition-duration: .3s;
+    margin: 1%;
+  }
+
+  .btn:hover {
+    background: rgba(0, 0, 0, .1);
+  }
+
+  .buttons {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: space-between;
+    height: 50%;
+  }
+
+  #details {
+    height: 0%;
+    transition-duration: 0.5s;
+  }
+
+  .tall {
+    height: 100% !important;
+  }
+</style>
+
+<body>
+  <div id="prediction"> Text </div>
+  <div id="details" class="hidden">
+    <table>
+      <tr>
+        <td id="confidence"></td>
+      </tr>
+    </table>
+  </div>
+  <button type="button" class="btn hidden" id="stop"><i class="fas fa-stop fa-lg"></i></button>
+  <button type="button" class="btn" id="start"><i class="fas fa-play fa-lg"></i></button>
+  <button type="button" class="btn" id="detail"><i class="fas fa-info-circle fg-lg"></i></button>
+</body>
+<script src="node_modules/socket.io/client-dist/socket.io.js"></script>
+<script type="module">
+  var socket = io("http://localhost:3000")
+
+  const stopButton = document.getElementById("stop");
+  const startButton = document.getElementById("start");
+  const detailButton = document.getElementById("detail");
+  const detailsDiv = document.getElementById("details");
+  detailButton.addEventListener("click", () => {
+    detailsDiv.classList.toggle("hidden")
+    console.log("femvoed")
+  })
+
+  const handleSuccess = async function (stream) {
+    const mediaRecorder = await new RecordRTC(stream, {
+      type: 'audio',
+      recorderType: RecordRTC.StereoAudioRecorder, // force for all browsers
+      numberOfAudioChannels: 2
+    });
+    mediaRecorder.startRecording()
+    stopButton.classList.remove("hidden")
+
+    stopButton.addEventListener("click", async function () {
+      stopButton.classList.add("hidden")
+      await mediaRecorder.stopRecording(function () {
+        let blob = mediaRecorder.getBlob();
+        console.log(blob)
+        socket.emit("file", blob)
+      });
+      startButton.classList.remove("hidden")
+    });
+  };
+
+  startButton.addEventListener("click", () => {
+    startButton.classList.add("hidden")
+    navigator.mediaDevices
+      .getUserMedia({ audio: true, video: false })
+      .then(handleSuccess);
+  })
+
+
+  socket.on("prediction", function (result) {
+    console.log("result: ", result)
+    let html = ""
+    for (let i = 0; i < result.transcripts[0].words.length; i++) {
+      let word = result.transcripts[0].words[i].word
+      html += word + " "
+    }
+    document.getElementById("prediction").innerText = html
+    document.getElementById("confidence").innerText = `Confidence: ${result.transcripts[0].confidence}`
+  })
+
+</script>
+
+</html>
