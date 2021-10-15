@@ -45,31 +45,51 @@ app.post("/dev/api/file", async (req, res) => {
   }
 
   var result = await callDeepspeech(path);
-  res.send(result)
+  const confidence = result.transcripts[0].confidence
+  var text = transcriptToText(result)
+  res.send({ text, confidence })
 })
 
-app.post("/dev/api/multiple_file", async (req, res) => {
-  const path = req.body?.path_list
-  console.log("path", path)
-  if (path === undefined || fs.existsSync(path) == false) {
-    console.log("Undefined")
-    res.sendStatus(400)
-    return
+function transcriptToText(transcript) {
+  var text = ""
+  transcript = transcript.transcripts[0]
+
+  for (let i = 0; i < transcript.words.length; i++) {
+    let word = transcript.words[i].word
+    text += word + " "
   }
+  return text
+}
 
-  var rd = readline.createInterface({
-    input: fs.createReadStream('/path/to/file'),
-    output: process.stdout,
-    console: false
-  });
+// app.post("/dev/api/multiple_file", async (req, res) => {
+//   const path_list = req.body?.path_list
+//   const path_result = req.body?.path_result
+//   if (path_list === undefined || path_result === undefined || fs.existsSync(path) == false) {
+//     console.log("Undefined")
+//     res.sendStatus(400)
+//     return
+//   }
 
-  rd.on('line', function (line) {
-    console.log(line);
-  });
+//   var rd = readline.createInterface({
+//     input: fs.createReadStream(path_list),
+//     output: process.stdout,
+//     console: false
+//   });
 
-  var result = await callDeepspeech(path);
-  res.send(result)
-})
+//   rd.on('line', async (line) => {
+//     console.log(line);
+//     if (fs.existsSync(line) == false) {
+//       throw `File ${line} doesn't exists`
+//       return
+//     }
+//     var result = await callDeepspeech(line);
+//     text = transcriptToText(result)
+//     fs.appendFileSync(path_result, text + "\n");
+//   });
+
+//   var result = await callDeepspeech(path);
+//   res.send(result)
+// })
 
 server.listen(2002, () => {
   console.log("listening on *:2002");
@@ -83,8 +103,9 @@ io.on("connection", (socket) => {
     console.log(blob);
     writeToFile(blob, PATH_AUDIO);
     var result = await callDeepspeech(PATH_AUDIO);
-    console.log(result);
-    socket.emit("prediction", result);
+    const confidence = result.transcripts[0].confidence
+    var text = transcriptToText(result)
+    socket.emit("prediction", { text, confidence });
   });
 
   socket.on("disconnect", () => {
