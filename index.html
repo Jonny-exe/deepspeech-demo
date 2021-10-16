@@ -119,6 +119,7 @@
   };
 
   startButton.addEventListener("click", () => {
+    document.getElementById("prediction").innerText = "..."
     startButton.classList.add("hidden")
     navigator.mediaDevices
       .getUserMedia({ audio: true, video: false })
