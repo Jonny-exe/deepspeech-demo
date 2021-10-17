@@ -18,7 +18,8 @@ const fs = require("fs");
 app.use(express.json())
 console.log(io.path())
 
-const PATH_MODEL = "models/output_graph.pbmm";
+const PATH_SCORER = "deepspeech-0.9.3-models.scorer";
+const PATH_MODEL = "deepspeech-0.9.3-models.pbmm";
 const PATH_AUDIO = "test.wav";
 const CONDA_ENV_NAME = "deepspeech";
 
@@ -37,14 +38,23 @@ app.get("/dev/api_paths", (req, res) => {
 
 app.post("/dev/api/file", async (req, res) => {
   const path = req.body?.path_file
-  console.log("path", path)
+  console.log(req.body)
+  const language = req.body?.language || "en"
+  console.log("path_file", path)
   if (path === undefined || fs.existsSync(path) == false) {
     console.log("Undefined")
     res.sendStatus(400)
     return
   }
-
-  var result = await callDeepspeech(path);
+  var path_model = ""
+  switch (language) {
+    case "en":
+      path_model = PATH_MODEL
+    case "es":
+      path_model = "output_graph.pb"
+  }
+      
+  var result = await callDeepspeech(path, path_model);
   const confidence = result.transcripts[0].confidence
   var text = transcriptToText(result)
   res.send({ text, confidence })
@@ -99,10 +109,17 @@ server.listen(2002, () => {
 io.on("connection", (socket) => {
   console.log("a user connected");
 
-  socket.on("file", async (blob) => {
-    console.log(blob);
+  socket.on("file", async ({blob, language}) => {
+    console.log(blob, language);
     writeToFile(blob, PATH_AUDIO);
-    var result = await callDeepspeech(PATH_AUDIO);
+    var path_model
+    switch (language) {
+      case "es":
+      	path_model = "output_graph.pb";
+      case "en":
+      	path_model = PATH_MODEL;
+    }
+    var result = await callDeepspeech(PATH_AUDIO, path_model);
     const confidence = result.transcripts[0].confidence
     var text = transcriptToText(result)
     socket.emit("prediction", { text, confidence });
@@ -117,8 +134,8 @@ function writeToFile(blob, path) {
   fs.writeFileSync(path, blob);
 }
 
-async function callDeepspeech(path_audio) {
-  const command = `conda run -n ${CONDA_ENV_NAME} deepspeech --model ${PATH_MODEL} --audio ${path_audio} --json`;
+async function callDeepspeech(path_audio, path_model) {
+  const command = `conda run -n ${CONDA_ENV_NAME} deepspeech --model ${path_model} --scorer ${PATH_SCORER} --audio ${path_audio} --json`;
   // TODO: add tests to see if deepspeech is installed
   var result = await execCommand(command);
   return JSON.parse(result);
@@ -127,6 +144,7 @@ async function callDeepspeech(path_audio) {
 function execCommand(command, callback) {
   return new Promise(function (resolve, reject) {
     exec(command, (_error, stdout, _stderr) => {
+      console.log(_error, _stderr)
       resolve(stdout);
     });
   });

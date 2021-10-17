@@ -11,7 +11,10 @@
   <script defer src="node_modules/@fortawesome/fontawesome-free/js/solid.js" type="application/javascript"></script>
   <script defer src="node_modules/@fortawesome/fontawesome-free/js/fontawesome.js"
     type="application/javascript"></script>
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/css/bootstrap.min.css" rel="stylesheet" integrity="sha384-1BmE4kWBq78iYhFldvKuhfTAU6auU8tT94WrHftjDbrCEXSU1oBoqyl2QvZ6jIW3" crossorigin="anonymous">
+  <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/js/bootstrap.bundle.min.js" integrity="sha384-ka7Sk0Gln4gmtz2MlQnikT1wXgYsOg+OMhuP+IlRH9sENBO0LRn5q+8nbTov4+1p" crossorigin="anonymous"></script>
 </head>
+
 
 <style>
   body {
@@ -40,7 +43,7 @@
     display: None;
   }
 
-  .btn {
+  .button {
     background: rgba(0, 0, 0, 0);
     border: none;
     padding: 1%;
@@ -79,21 +82,42 @@
         <td id="confidence"></td>
       </tr>
     </table>
+  </div sytle="width: 50%">
+  <button type="button" class="button hidden" id="stop"><i class="fas fa-stop fa-lg"></i></button>
+  <button type="button" class="button" id="start"><i class="fas fa-play fa-lg"></i></button>
+  <button type="button" class="button" id="detail"><i class="fas fa-info-circle fg-lg"></i></button>
+
+  <div class="btn-group" role="group" aria-label="Basic radio toggle button group">
+  <input type="radio" class="btn-check" name="language" id="en" autocomplete="off" value="en" checked>
+  <label class="btn btn-outline-secondary" for="en">English</label>
+
+  <input type="radio" class="btn-check" name="language" id="es" autocomplete="off" value="es">
+  <label class="btn btn-outline-secondary" for="es">Español</label>
   </div>
-  <button type="button" class="btn hidden" id="stop"><i class="fas fa-stop fa-lg"></i></button>
-  <button type="button" class="btn" id="start"><i class="fas fa-play fa-lg"></i></button>
-  <button type="button" class="btn" id="detail"><i class="fas fa-info-circle fg-lg"></i></button>
+
 </body>
 <script src="node_modules/socket.io/client-dist/socket.io.js"></script>
 <script type="module" src="env.js" type="text/javascript"></script>
 <script type="module">
   import PATH from './env.js'
-  var socket = io("http://localhost/", { path: PATH })
+  var socket = io("https://aholab.ehu.eus/", { path: PATH })
 
   const stopButton = document.getElementById("stop");
   const startButton = document.getElementById("start");
   const detailButton = document.getElementById("detail");
   const detailsDiv = document.getElementById("details");
+  const laguageInputs = document.getElementsByClassName("btn-check")
+
+  function getCurrentLanguage() {
+    var radios = document.getElementsByName('language');
+    for (var i = 0, length = radios.length; i < length; i++) {
+      if (radios[i].checked) {
+        return radios[i].value
+      }
+    }
+  }
+
+
   detailButton.addEventListener("click", () => {
     detailsDiv.classList.toggle("hidden")
   })
@@ -111,15 +135,16 @@
       stopButton.classList.add("hidden")
       await mediaRecorder.stopRecording(function () {
         let blob = mediaRecorder.getBlob();
-        console.log(blob)
-        socket.emit("file", blob)
+	const language = getCurrentLanguage()
+        console.log(blob, language)
+        socket.emit("file", {blob, language})
       });
       startButton.classList.remove("hidden")
     });
   };
 
   startButton.addEventListener("click", () => {
-    document.getElementById("prediction").innerText = "..."
+    document.getElementById("prediction").innerHTML = '<i class="fas fa-spinner"></i>'
     startButton.classList.add("hidden")
     navigator.mediaDevices
       .getUserMedia({ audio: true, video: false })
