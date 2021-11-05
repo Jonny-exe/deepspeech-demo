@@ -122,6 +122,18 @@
     detailsDiv.classList.toggle("hidden")
   })
 
+  const functionOnStop = async function () {
+    stopButton.classList.add("hidden")
+    await mediaRecorder.stopRecording(function () {
+      let blob = mediaRecorder.getBlob();
+      const language = getCurrentLanguage()
+      console.log(blob, language)
+      socket.emit("file", {blob, language})
+    });
+    startButton.classList.remove("hidden")
+    stopButton.removeEventListener("click", functionOnStop)
+  }
+
   const handleSuccess = async function (stream) {
     const mediaRecorder = await new RecordRTC(stream, {
       type: 'audio',
@@ -131,20 +143,11 @@
     mediaRecorder.startRecording()
     stopButton.classList.remove("hidden")
 
-    stopButton.addEventListener("click", async function () {
-      stopButton.classList.add("hidden")
-      await mediaRecorder.stopRecording(function () {
-        let blob = mediaRecorder.getBlob();
-	const language = getCurrentLanguage()
-        console.log(blob, language)
-        socket.emit("file", {blob, language})
-      });
-      startButton.classList.remove("hidden")
-    });
+    stopButton.addEventListener("click", functionOnStop);
   };
 
   startButton.addEventListener("click", () => {
-    document.getElementById("prediction").innerHTML = '<i class="fas fa-spinner"></i>'
+    document.getElementById("prediction").innerHTML = '<div class="spinner-border" role="status"><span class="visually-hidden">Loading...</span></div>'
     startButton.classList.add("hidden")
     navigator.mediaDevices
       .getUserMedia({ audio: true, video: false })
