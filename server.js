@@ -3,6 +3,7 @@ const app = express();
 const http = require("http");
 const server = http.createServer(app);
 const { Server } = require("socket.io");
+const { PREFIX, PATH_SCORER_ES, PATH_MODEL_ES, PATH_SCORER_EN, PATH_MODEL_EN } = require("./env")
 const io = new Server(server, {
   cors: {
     origins: ["*"],
@@ -10,6 +11,7 @@ const io = new Server(server, {
   // path: "/"
 });
 
+console.log( PREFIX, PATH_SCORER_ES, PATH_MODEL_ES, PATH_SCORER_EN, PATH_MODEL_EN )
 
 const { exec } = require("child_process");
 const readline = require('readline');
@@ -18,10 +20,10 @@ const fs = require("fs");
 app.use(express.json())
 console.log(io.path())
 
-const PATH_SCORER = "deepspeech-0.9.3-models.scorer";
-const PATH_MODEL = "deepspeech-0.9.3-models.pbmm";
-const PATH_AUDIO = "test.wav";
-const CONDA_ENV_NAME = "deepspeech";
+//const PATH_SCORER = PREFIX + "/deepspeech-0.9.3-models.scorer";
+//const PATH_MODEL = PREFIX + "/deepspeech-0.9.3-models.pbmm";
+//const PATH_AUDIO = PREFIX + "/test.wav";
+//const CONDA_ENV_NAME = "deepspeech";
 
 app.get("/", (req, res) => {
   console.log("Test")
@@ -38,7 +40,7 @@ app.get("/dev/api_paths", (req, res) => {
 
 app.post("/dev/api/file", async (req, res) => {
   const path = req.body?.path_file
-  console.log(req.body)
+  // console.log(req.body)
   const language = req.body?.language || "en"
   console.log("path_file", path)
   if (path === undefined || fs.existsSync(path) == false) {
@@ -47,14 +49,17 @@ app.post("/dev/api/file", async (req, res) => {
     return
   }
   var path_model = ""
+  console.log("Language: ", language)
   switch (language) {
     case "en":
       path_model = PATH_MODEL
+      path_scorer = PATH_SCORER
     case "es":
-      path_model = "output_graph.pb"
+      path_model = PREFIX + "/output_graph.pb"
+      path_scorer = PREFIX + "/kenlm1.scorer"
   }
       
-  var result = await callDeepspeech(path, path_model);
+  var result = await callDeepspeech(path, path_model, path_scorer);
   const confidence = result.transcripts[0].confidence
   var text = transcriptToText(result)
   res.send({ text, confidence })
@@ -110,16 +115,19 @@ io.on("connection", (socket) => {
   console.log("a user connected");
 
   socket.on("file", async ({blob, language}) => {
-    console.log(blob, language);
+    console.log("Language", language);
     writeToFile(blob, PATH_AUDIO);
     var path_model
-    switch (language) {
-      case "es":
-      	path_model = "output_graph.pb";
-      case "en":
+    if (language == "es") {
+      	console.log("HELLO INSIDE ES")
+      	path_model = PREFIX + "/output_graph.pb"
+	path_scorer = PREFIX + "/kenlm.scorer"
+    } else {
       	path_model = PATH_MODEL;
+	path_scorer = PATH_SCORER;
     }
-    var result = await callDeepspeech(PATH_AUDIO, path_model);
+    console.log("PATHS: ", path_model, path_scorer)
+    var result = await callDeepspeech(PATH_AUDIO, path_model, path_scorer);
     const confidence = result.transcripts[0].confidence
     var text = transcriptToText(result)
     socket.emit("prediction", { text, confidence });
@@ -134,8 +142,9 @@ function writeToFile(blob, path) {
   fs.writeFileSync(path, blob);
 }
 
-async function callDeepspeech(path_audio, path_model) {
-  const command = `conda run -n ${CONDA_ENV_NAME} deepspeech --model ${path_model} --scorer ${PATH_SCORER} --audio ${path_audio} --json`;
+async function callDeepspeech(path_audio, path_model, path_scorer) {
+  console.log("PATHS: ", path_audio, path_model, path_scorer)
+  const command = `conda run -n ${CONDA_ENV_NAME} deepspeech --model ${path_model} --scorer ${path_scorer} --audio ${path_audio} --json`;
   // TODO: add tests to see if deepspeech is installed
   var result = await execCommand(command);
   return JSON.parse(result);
@@ -144,7 +153,7 @@ async function callDeepspeech(path_audio, path_model) {
 function execCommand(command, callback) {
   return new Promise(function (resolve, reject) {
     exec(command, (_error, stdout, _stderr) => {
-      console.log(_error, _stderr)
+      // console.log(_error, _stderr)
       resolve(stdout);
     });
   });

@@ -122,18 +122,6 @@
     detailsDiv.classList.toggle("hidden")
   })
 
-  const functionOnStop = async function () {
-    stopButton.classList.add("hidden")
-    await mediaRecorder.stopRecording(function () {
-      let blob = mediaRecorder.getBlob();
-      const language = getCurrentLanguage()
-      console.log(blob, language)
-      socket.emit("file", {blob, language})
-    });
-    startButton.classList.remove("hidden")
-    stopButton.removeEventListener("click", functionOnStop)
-  }
-
   const handleSuccess = async function (stream) {
     const mediaRecorder = await new RecordRTC(stream, {
       type: 'audio',
@@ -143,7 +131,19 @@
     mediaRecorder.startRecording()
     stopButton.classList.remove("hidden")
 
-    stopButton.addEventListener("click", functionOnStop);
+    const functionOnClick = async function () {
+      stopButton.removeEventListener("click", functionOnClick)
+      stopButton.classList.add("hidden")
+      await mediaRecorder.stopRecording(function () {
+        let blob = mediaRecorder.getBlob();
+	const language = getCurrentLanguage()
+        console.log(blob, language)
+        socket.emit("file", {blob, language})
+      });
+      startButton.classList.remove("hidden")
+    }
+
+    stopButton.addEventListener("click", functionOnClick);
   };
 
   startButton.addEventListener("click", () => {
