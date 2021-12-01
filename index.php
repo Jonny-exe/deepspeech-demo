@@ -9,8 +9,7 @@
   <script src="https://www.WebRTC-Experiment.com/RecordRTC.js"></script>
   <script defer src="node_modules/@fortawesome/fontawesome-free/js/brands.js" type="application/javascript"></script>
   <script defer src="node_modules/@fortawesome/fontawesome-free/js/solid.js" type="application/javascript"></script>
-  <script defer src="node_modules/@fortawesome/fontawesome-free/js/fontawesome.js"
-    type="application/javascript"></script>
+  <script defer src="node_modules/@fortawesome/fontawesome-free/js/fontawesome.js" type="application/javascript"></script>
   <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/css/bootstrap.min.css" rel="stylesheet" integrity="sha384-1BmE4kWBq78iYhFldvKuhfTAU6auU8tT94WrHftjDbrCEXSU1oBoqyl2QvZ6jIW3" crossorigin="anonymous">
   <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/js/bootstrap.bundle.min.js" integrity="sha384-ka7Sk0Gln4gmtz2MlQnikT1wXgYsOg+OMhuP+IlRH9sENBO0LRn5q+8nbTov4+1p" crossorigin="anonymous"></script>
 </head>
@@ -76,15 +75,15 @@
 
 <body>
   <div id="prediction"> <?php
-  if ($_GET["transcribed"]) {
-    echo $_GET["transcribed"];
-  } else {
-    echo "Text";
-  }
-  ?></div>
+                        if ($_GET["transcribed"]) {
+                          echo $_GET["transcribed"];
+                        } else {
+                          echo "Text";
+                        }
+                        ?></div>
   <form id="form" method=post action=/transcribe.php>
     <input id="file" type=hidden name=file value=""></input>
-    <input id="language_form" type=hidden name=language  value=""></input>
+    <input id="language_form" type=hidden name=language value=""></input>
   </form>
   <div id="details" class="hidden">
     <table>
@@ -98,11 +97,11 @@
   <button type="button" class="button" id="detail"><i class="fas fa-info-circle fg-lg"></i></button>
 
   <div class="btn-group" role="group" aria-label="Basic radio toggle button group">
-  <input type="radio" class="btn-check" name="language" id="en" autocomplete="off" value="en" checked>
-  <label class="btn btn-outline-secondary" for="en">English</label>
+    <input type="radio" class="btn-check" name="language" id="en" autocomplete="off" value="en" checked>
+    <label class="btn btn-outline-secondary" for="en">English</label>
 
-  <input type="radio" class="btn-check" name="language" id="es" autocomplete="off" value="es">
-  <label class="btn btn-outline-secondary" for="es">Español</label>
+    <input type="radio" class="btn-check" name="language" id="es" autocomplete="off" value="es">
+    <label class="btn btn-outline-secondary" for="es">Español</label>
   </div>
 
 </body>
@@ -117,7 +116,8 @@
   const detailButton = document.getElementById("detail");
   const detailsDiv = document.getElementById("details");
   const laguageInputs = document.getElementsByClassName("btn-check")
- 0
+  0
+
   function getCurrentLanguage() {
     var radios = document.getElementsByName('language');
     for (var i = 0, length = radios.length; i < length; i++) {
@@ -131,7 +131,7 @@
     detailsDiv.classList.toggle("hidden")
   })
 
-  const handleSuccess = async function (stream) {
+  const handleSuccess = async function(stream) {
     const mediaRecorder = await new RecordRTC(stream, {
       type: 'audio',
       recorderType: RecordRTC.StereoAudioRecorder, // force for all browsers
@@ -141,32 +141,43 @@
     stopButton.classList.remove("hidden")
 
 
-    const functionOnClick = async function () {
+    const functionOnClick = async function() {
       stopButton.removeEventListener("click", functionOnClick)
       stopButton.classList.add("hidden")
-      await mediaRecorder.stopRecording(async function () {
+      await mediaRecorder.stopRecording(async function() {
         let blob = mediaRecorder.getBlob();
         const language = getCurrentLanguage()
         console.log("blob: ", await blob.text(), await blob.arrayBuffer())
+        var fd = new FormData()
+        fd.append("content", blob)
+
         //socket.emit("file", {blob, language})
         /*
         let body = await fetch("./transcribe.php/", {
           method: "POST",
           body: JSON.stringify({file: await blob.text(), language})
         })
-        */
-        document.getElementById("language_form").value = language;
-        document.getElementById("file").value = await blob.text();
-        document.getElementById("form").submit();
-
-        body = await body.json()
-        console.log("body: ", body);
         
-        console.log("result: ", text)
-        document.getElementById("prediction").innerText = text
-        document.getElementById("confidence").innerText = `Confidence: ${confidence}`
-        });
-        //startButton.classList.remove("hidden")
+        */
+
+        var reader = new FileReader();
+        reader.readAsDataURL(blob);
+        reader.onloadend = function() {
+          var base64data = reader.result;
+          console.log(base64data);
+          document.getElementById("language_form").value = language;
+
+          document.getElementById("file").value = base64data;
+
+          //document.getElementById("file").value = fd;
+
+          document.getElementById("form").submit();
+
+          document.getElementById("prediction").innerText = "Hello"
+          document.getElementById("confidence").innerText = `Confidence: ${confidence}`
+        }
+      });
+      //startButton.classList.remove("hidden")
     }
 
     stopButton.addEventListener("click", functionOnClick);
@@ -176,7 +187,10 @@
     document.getElementById("prediction").innerHTML = '<div class="spinner-border" role="status"><span class="visually-hidden">Loading...</span></div>'
     startButton.classList.add("hidden")
     navigator.mediaDevices
-      .getUserMedia({ audio: true, video: false })
+      .getUserMedia({
+        audio: true,
+        video: false
+      })
       .then(handleSuccess);
   })
 
@@ -187,7 +201,6 @@
     document.getElementById("confidence").innerText = `Confidence: ${confidence}`
   })
   */
-
 </script>
 
 </html>

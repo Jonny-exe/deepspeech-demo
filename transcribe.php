@@ -1,12 +1,12 @@
 <?php
-if(empty($_SERVER['CONTENT_TYPE']))
-{
- $_SERVER['CONTENT_TYPE'] = "application/x-www-form-urlencoded";
+if (empty($_SERVER['CONTENT_TYPE'])) {
+  $_SERVER['CONTENT_TYPE'] = "application/x-www-form-urlencoded";
 }
 
 header("Access-Control-Allow-Origin: *");
 
-function transcribe($language) {
+function transcribe($language)
+{
   $CONDA_ENV_NAME = "deepspeech";
   if ($language == "es") {
     $path_model = "output_graph.pb";
@@ -22,22 +22,24 @@ function transcribe($language) {
   $map_transcribe = json_decode($json_transcribe);
   return $map_transcribe;
 }
-function return_error($message) {
-    echo json_encode(array("transcribed" => $message));
+function return_error($message)
+{
+  echo json_encode(array("transcribed" => $message));
 }
 
-function write_file($file_contents, $filename) {
+function write_file($file_contents, $filename)
+{
   $file = fopen($filename, "wb");
   if ($file === false) {
     return_error("Error opening audio file");
   }
 
-  fwrite($file, $file_contents);
+  fwrite($file, base64_decode($file_contents));
   fclose($file);
 }
 
 if ($_POST['file'] && $_POST['language']) {
-  $file_contents = $_POST['file']; 
+  $file_contents = $_POST['file'];
   $language = $_POST['language'];
 } else {
   return_error("Parameters are missing");
@@ -46,13 +48,10 @@ if ($_POST['file'] && $_POST['language']) {
 
 
 $FILENAME = "test.wav";
-write_file($file_contents, $FILENAME);
+write_file(substr($file_contents, 22), $FILENAME);
 
-//$transcribed = transcribe($language);
-$transcribed = array("text" => "Hello");
+$transcribed = transcribe($language);
 $json_response = json_encode($transcribed);
 //echo $json_response;
-header("Location: http://localhost:3000/?transcribed=".$transcribed["text"]);
+header("Location: http://localhost:3000/?transcribed=" . $transcribed["text"]);
 exit();
-
-?>
